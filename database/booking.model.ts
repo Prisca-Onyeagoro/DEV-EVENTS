@@ -38,20 +38,27 @@ BookingSchema.statics.validateEventExists = async function (
   return !!event;
 };
 
-BookingSchema.pre<IBooking>('save', async function (next) {
+BookingSchema.pre<IBooking>('save', async function () {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(this.email)) {
-    return next(new Error('Invalid email format'));
+    throw new Error('Invalid email format');
+  }
+
+  let eventIdObj: mongoose.Types.ObjectId;
+  if (this.eventId instanceof mongoose.Types.ObjectId) {
+    eventIdObj = this.eventId;
+  } else if (typeof this.eventId === 'object' && this.eventId !== null) {
+    eventIdObj = (this.eventId as IEvent)._id as mongoose.Types.ObjectId;
+  } else {
+    eventIdObj = new mongoose.Types.ObjectId(this.eventId as string);
   }
 
   const exists = await (this.constructor as BookingModel).validateEventExists(
-    this.eventId
+    eventIdObj
   );
   if (!exists) {
-    return next(new Error('Referenced event does not exist'));
+    throw new Error('Referenced event does not exist');
   }
-
-  next();
 });
 
 export const Booking = mongoose.model<IBooking, BookingModel>('Booking', BookingSchema);

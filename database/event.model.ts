@@ -41,7 +41,7 @@ const EventSchema = new Schema<IEvent>(
 
 EventSchema.index({ slug: 1 }, { unique: true });
 
-EventSchema.pre<IEvent>('save', async function (next) {
+EventSchema.pre<IEvent>('save', async function () {
   if (this.isModified('title')) {
     this.slug = this.title
       .toLowerCase()
@@ -54,19 +54,17 @@ EventSchema.pre<IEvent>('save', async function (next) {
   if (this.isModified('date')) {
     const dateObj = new Date(this.date);
     if (isNaN(dateObj.getTime())) {
-      return next(new Error('Invalid date format'));
+      throw new Error('Invalid date format');
     }
     this.date = dateObj.toISOString().split('T')[0];
   }
 
   if (this.isModified('time')) {
-    const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(this.time)) {
-      this.time = this.time.padStart(5, '0');
+      throw new Error('Invalid time format');
     }
   }
-
-  next();
 });
 
 export const Event = mongoose.model<IEvent>('Event', EventSchema);
